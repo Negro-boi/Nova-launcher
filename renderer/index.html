@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nova Launcher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <!-- Title bar -->
+  <div class="titlebar" id="titlebar">
+    <div class="titlebar-left">
+      <div class="logo-mark">
+        <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
+          <rect x="1" y="1" width="9" height="9" fill="#4ade80"/>
+          <rect x="12" y="1" width="9" height="9" fill="#22c55e"/>
+          <rect x="1" y="12" width="9" height="9" fill="#16a34a"/>
+          <rect x="12" y="12" width="9" height="9" fill="#4ade80"/>
+          <rect x="5"  y="5"  width="3" height="3" fill="#0d0d0f"/>
+          <rect x="14" y="5"  width="3" height="3" fill="#0d0d0f"/>
+          <rect x="5"  y="14" width="3" height="3" fill="#0d0d0f"/>
+          <rect x="14" y="14" width="3" height="3" fill="#0d0d0f"/>
+        </svg>
+      </div>
+      <span class="app-name">NOVA<span class="accent"> LAUNCHER</span></span>
+      <!-- Update banner (hidden until update found) -->
+      <div class="update-banner" id="updateBanner" style="display:none">
+        <svg viewBox="0 0 16 16" fill="currentColor" width="11" height="11"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm.75 3.75v3.5h2l-2.75 3.5L5.25 8.25h2v-3.5h1.5z"/></svg>
+        <span id="updateText">Update available</span>
+        <a id="updateLink" href="#" class="update-link">Download</a>
+        <button class="update-dismiss" id="updateDismiss">×</button>
+      </div>
+    </div>
+    <div class="titlebar-drag"></div>
+    <div class="titlebar-controls">
+      <button class="tb-btn minimize" onclick="window.launcher.minimize()"><svg width="12" height="2" viewBox="0 0 12 2"><rect width="12" height="2" fill="currentColor"/></svg></button>
+      <button class="tb-btn maximize" onclick="window.launcher.maximize()"><svg width="11" height="11" viewBox="0 0 11 11"><rect x="0.5" y="0.5" width="10" height="10" stroke="currentColor" fill="none"/></svg></button>
+      <button class="tb-btn close"    onclick="window.launcher.close()"><svg width="11" height="11" viewBox="0 0 11 11"><path d="M1 1L10 10M10 1L1 10" stroke="currentColor" stroke-width="1.5"/></svg></button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <nav class="sidebar-nav">
+      <button class="nav-btn active" data-tab="home">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+        <span>Home</span>
+      </button>
+      <button class="nav-btn" data-tab="profiles">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <span>Profiles</span>
+      </button>
+      <button class="nav-btn" data-tab="versions">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16,3 21,3 21,8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21,16 21,21 16,21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+        <span>Versions</span>
+      </button>
+      <button class="nav-btn" data-tab="java">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
+        <span>Java</span>
+      </button>
+      <button class="nav-btn" data-tab="mods">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27,6.96 12,12.01 20.73,6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span>Mods</span>
+      </button>
+      <button class="nav-btn" data-tab="browse">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>Browse</span>
+      </button>
+      <button class="nav-btn" data-tab="screenshots">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+        <span>Screenshots</span>
+      </button>
+      <button class="nav-btn" data-tab="servers">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+        <span>Servers</span>
+      </button>
+      <button class="nav-btn" data-tab="settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="java-badge" id="javaBadge"><div class="badge-dot"></div><span>Java</span></div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <main class="content">
+
+    <!-- ══ HOME ══ -->
+    <section class="tab-panel active" id="tab-home">
+      <div class="home-bg">
+        <div class="grid-overlay"></div>
+        <div class="glow-orb orb1"></div>
+        <div class="glow-orb orb2"></div>
+      </div>
+
+      <!-- Crash alert (hidden) -->
+      <div class="crash-alert" id="crashAlert" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="crashAlertText">Game crashed</span>
+        <button class="crash-alert-btn" id="crashAlertBtn">View Crash Log</button>
+        <button class="crash-alert-dismiss" id="crashAlertDismiss">×</button>
+      </div>
+
+      <div class="home-inner">
+        <div class="home-hero">
+          <div class="hero-title-wrap">
+            <h1 class="hero-title">NOVA<br/><span class="hero-sub">LAUNCHER</span></h1>
+            <p class="hero-tagline">Offline · Fast · Open</p>
+          </div>
+
+          <div class="hero-controls">
+            <!-- Profile selector -->
+            <div class="profile-row">
+              <label class="field-label">PROFILE</label>
+              <div class="profile-select-wrap">
+                <div class="select-wrapper">
+                  <select id="activeProfileSelect" class="version-select" style="min-width:200px">
+                    <option value="">Loading profiles…</option>
+                  </select>
+                  <svg class="select-arrow" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                </div>
+                <button class="icon-btn" id="newProfileQuickBtn" title="New Profile">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Loader selector -->
+            <div class="loader-row">
+              <label class="field-label">LOADER</label>
+              <div class="loader-btns">
+                <button class="loader-btn active" data-loader="vanilla">
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z"/></svg> Vanilla
+                </button>
+                <button class="loader-btn" data-loader="forge">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><path d="M8 2v4M8 10v4M2 8h4M10 8h4"/><circle cx="8" cy="8" r="2"/></svg> Forge
+                </button>
+                <button class="loader-btn" data-loader="fabric">
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12"><path d="M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H3zM9 9h4v4H9z" opacity=".6"/><path d="M5 5h6v6H5z"/></svg> Fabric
+                </button>
+                <button class="loader-btn" data-loader="optifine">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg> OptiFine
+                </button>
+              </div>
+            </div>
+
+            <!-- Version + loader version + username + play -->
+            <div class="version-select-wrap">
+              <label class="field-label">MC VERSION</label>
+              <div class="select-wrapper">
+                <select id="versionSelect" class="version-select"><option value="">Loading…</option></select>
+                <svg class="select-arrow" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </div>
+            </div>
+
+            <div class="loader-version-wrap" id="loaderVersionWrap" style="display:none">
+              <label class="field-label" id="loaderVersionLabel">LOADER VERSION</label>
+              <div class="select-wrapper">
+                <select id="loaderVersionSelect" class="version-select"><option value="">Select MC version…</option></select>
+                <svg class="select-arrow" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </div>
+              <div class="loader-spinner" id="loaderSpinner" style="display:none"><div class="spinner" style="width:14px;height:14px;border-width:2px"></div></div>
+            </div>
+
+            <div class="username-wrap">
+              <label class="field-label">USERNAME</label>
+              <input type="text" id="usernameInput" class="username-input" placeholder="Enter username" maxlength="16"/>
+            </div>
+
+            <button class="play-btn" id="playBtn">
+              <span class="play-btn-bg"></span>
+              <span class="play-btn-content">
+                <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <span class="play-text">PLAY</span>
+              </span>
+            </button>
+            <button class="cancel-game-btn" id="cancelGameBtn" style="display:none" title="Stop the game">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              STOP
+            </button>
+          </div>
+        </div>
+
+        <!-- Recently played -->
+        <div class="recent-plays" id="recentPlays" style="display:none">
+          <div class="recent-label">RECENTLY PLAYED</div>
+          <div class="recent-list" id="recentList"></div>
+        </div>
+
+        <!-- Status + progress -->
+        <div class="status-bar">
+          <div class="status-text" id="statusText">Ready to launch</div>
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+
+        <!-- Console -->
+        <div class="console-wrap">
+          <div class="console-header">
+            <span>CONSOLE</span>
+            <button class="console-clear" onclick="clearConsole()">Clear</button>
+          </div>
+          <div class="console-body" id="consoleBody"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ PROFILES ══ -->
+    <section class="tab-panel" id="tab-profiles">
+      <div class="tab-header">
+        <h2 class="tab-title">Profiles</h2>
+        <button class="save-btn" id="createProfileBtn">+ New Profile</button>
+      </div>
+
+      <!-- Create / Edit form (hidden) -->
+      <div class="profile-form-wrap" id="profileFormWrap" style="display:none">
+        <div class="profile-form">
+          <h3 class="profile-form-title" id="profileFormTitle">New Profile</h3>
+          <div class="profile-form-grid">
+            <div class="pf-field">
+              <label class="field-label">PROFILE NAME</label>
+              <input type="text" id="pfName" class="setting-input" placeholder="e.g. Survival 1.21"/>
+            </div>
+            <div class="pf-field">
+              <label class="field-label">MC VERSION</label>
+              <div class="select-wrapper">
+                <select id="pfVersion" class="version-select" style="min-width:160px"><option value="">Select…</option></select>
+                <svg class="select-arrow" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </div>
+            </div>
+            <div class="pf-field">
+              <label class="field-label">LOADER</label>
+              <div class="select-wrapper">
+                <select id="pfLoader" class="version-select" style="min-width:130px">
+                  <option value="vanilla">Vanilla</option>
+                  <option value="fabric">Fabric</option>
+                  <option value="forge">Forge</option>
+                  <option value="optifine">OptiFine</option>
+                </select>
+                <svg class="select-arrow" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </div>
+            </div>
+            <div class="pf-field">
+              <label class="field-label">RAM (MB)</label>
+              <input type="number" id="pfRam" class="setting-input" style="min-width:120px" value="2048" step="512" min="512" max="16384"/>
+              <button class="suggest-btn" id="pfRamSuggest" title="Auto-suggest">💡</button>
+            </div>
+          </div>
+          <div class="profile-form-actions">
+            <button class="save-btn" id="profileFormSave">Save Profile</button>
+            <button class="cancel-btn" id="profileFormCancel">Cancel</button>
+          </div>
+          <input type="hidden" id="pfEditId"/>
+        </div>
+      </div>
+
+      <!-- Profile grid -->
+      <div class="profiles-grid" id="profilesGrid">
+        <div class="loading-spinner"><div class="spinner"></div><span>Loading profiles…</span></div>
+      </div>
+    </section>
+
+    <!-- ══ VERSIONS ══ -->
+    <section class="tab-panel" id="tab-versions">
+      <div class="tab-header">
+        <h2 class="tab-title">Versions</h2>
+        <div class="filter-row">
+          <button class="filter-btn active" data-filter="release">Releases</button>
+          <button class="filter-btn" data-filter="snapshot">Snapshots</button>
+          <button class="filter-btn" data-filter="old">Old</button>
+          <button class="filter-btn" data-filter="all">All</button>
+          <input type="text" id="versionSearch" class="version-search" placeholder="Search…"/>
+        </div>
+      </div>
+      <div class="versions-grid" id="versionsGrid">
+        <div class="loading-spinner"><div class="spinner"></div><span>Fetching versions…</span></div>
+      </div>
+    </section>
+
+    <!-- ══ JAVA ══ -->
+    <section class="tab-panel" id="tab-java">
+      <div class="tab-header"><h2 class="tab-title">Java Manager</h2></div>
+      <div class="java-content">
+        <div class="java-card">
+          <div class="java-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg></div>
+          <div class="java-info">
+            <h3 id="javaStatusTitle">Checking Java…</h3>
+            <p id="javaStatusDesc">Verifying Adoptium JRE</p>
+            <p id="javaPathText" class="java-path"></p>
+          </div>
+          <button class="java-action-btn" id="javaActionBtn" style="display:none">Download JRE 21</button>
+        </div>
+        <div class="java-download-area" id="javaDownloadArea" style="display:none">
+          <div class="dl-label" id="dlLabel">Downloading…</div>
+          <div class="dl-track"><div class="dl-fill" id="dlFill"></div></div>
+          <div class="dl-percent" id="dlPercent">0%</div>
+        </div>
+        <div class="java-versions-info">
+          <h4>About Adoptium</h4>
+          <p>Nova Launcher uses <strong>Eclipse Temurin</strong> (Adoptium) JRE — open-source, production-quality. Downloaded automatically when needed.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ MODS ══ -->
+    <section class="tab-panel" id="tab-mods">
+      <div class="tab-header">
+        <h2 class="tab-title">Mods</h2>
+        <div class="mods-header-right">
+          <div class="select-wrapper">
+            <select id="modsProfileSelect" class="version-select" style="min-width:220px"><option value="">Select profile…</option></select>
+            <svg class="select-arrow" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+          </div>
+          <button class="save-btn" id="checkUpdatesBtn">Check Updates</button>
+          <button class="save-btn" id="openModsFolderBtn">Open Folder</button>
+          <label class="save-btn" style="cursor:pointer">+ Add Mod<input type="file" id="modFileInput" accept=".jar" multiple style="display:none"/></label>
+        </div>
+      </div>
+
+      <!-- Mod update results (hidden) -->
+      <div class="mod-updates-bar" id="modUpdatesBar" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+        <span id="modUpdatesText">Checking…</span>
+        <button class="update-all-btn" id="updateAllModsBtn" style="display:none">Update All</button>
+        <button class="mod-updates-dismiss" id="modUpdatesDismiss">×</button>
+      </div>
+
+      <div class="mods-empty" id="modsEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="color:var(--text3)"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        <p>Select a Fabric or Forge profile to manage mods.</p>
+      </div>
+      <div class="mods-list" id="modsList" style="display:none">
+        <div class="mods-list-header"><span>MOD NAME</span><span>SIZE</span><span>ENABLED</span><span></span></div>
+        <div id="modsListBody"></div>
+      </div>
+      <div class="mod-dropzone" id="modDropzone"><div class="dropzone-inner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Drop .jar files here</p></div></div>
+    </section>
+
+    <!-- ══ BROWSE ══ -->
+    <section class="tab-panel" id="tab-browse">
+      <!-- Sub-tabs -->
+      <div class="browse-tabs">
+        <button class="browse-tab active" data-btab="mods">Mods</button>
+        <button class="browse-tab" data-btab="modpacks">Modpacks</button>
+      </div>
+
+      <!-- Mods panel -->
+      <div class="browse-panel active" id="browse-mods">
+        <div class="browse-header-row">
+          <div class="browse-search-box">
+            <svg class="browse-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="browseSearchInput" class="browse-search-input" placeholder="Search mods on Modrinth…"/>
+          </div>
+          <div class="select-wrapper"><select id="browseVersionFilter" class="version-select" style="min-width:120px"><option value="">Any version</option></select><svg class="select-arrow" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+          <div class="select-wrapper"><select id="browseLoaderFilter" class="version-select" style="min-width:110px"><option value="">Any loader</option><option value="fabric">Fabric</option><option value="forge">Forge</option><option value="quilt">Quilt</option><option value="neoforge">NeoForge</option></select><svg class="select-arrow" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+          <div class="select-wrapper"><select id="browseProfileSelect" class="version-select" style="min-width:160px"><option value="">Install to profile…</option></select><svg class="select-arrow" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+          <button class="save-btn" id="browseSearchBtn">Search</button>
+        </div>
+        <div class="browse-results-meta" id="browseResultsMeta" style="display:none"><span id="browseResultsCount"></span></div>
+        <div class="browse-state" id="browseEmptyState"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="48" height="48" style="color:var(--text3)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>Search for mods above</p><span>Powered by the Modrinth API</span></div>
+        <div class="browse-state" id="browseLoadingState" style="display:none"><div class="spinner"></div><span>Searching…</span></div>
+        <div class="browse-state" id="browseErrorState" style="display:none"><p id="browseErrorMsg" style="color:var(--danger)">Error</p></div>
+        <div class="browse-grid" id="browseGrid" style="display:none"></div>
+        <div class="browse-load-more" id="browseLoadMore" style="display:none"><button class="save-btn" id="browseLoadMoreBtn">Load More</button><span id="browseLoadMoreMeta"></span></div>
+      </div>
+
+      <!-- Modpacks panel -->
+      <div class="browse-panel" id="browse-modpacks">
+        <div class="browse-header-row">
+          <div class="browse-search-box">
+            <svg class="browse-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="mpSearchInput" class="browse-search-input" placeholder="Search modpacks on Modrinth…"/>
+          </div>
+          <div class="select-wrapper"><select id="mpVersionFilter" class="version-select" style="min-width:120px"><option value="">Any version</option></select><svg class="select-arrow" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+          <div class="select-wrapper"><select id="mpInstallProfile" class="version-select" style="min-width:160px"><option value="">Install to profile…</option></select><svg class="select-arrow" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+          <button class="save-btn" id="mpSearchBtn">Search</button>
+          <button class="icon-btn" id="importPackBtn" title="Import .zip / .mrpack from disk" style="padding:0 10px">📦 Import</button>
+        </div>
+        <div class="browse-state" id="mpEmptyState"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="48" height="48" style="color:var(--text3)"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg><p>Search for modpacks above</p></div>
+        <div class="browse-state" id="mpLoadingState" style="display:none"><div class="spinner"></div><span>Searching…</span></div>
+        <div class="browse-state" id="mpErrorState" style="display:none"><p id="mpErrorMsg" style="color:var(--danger)">Error</p></div>
+        <div class="browse-grid" id="mpGrid" style="display:none"></div>
+        <div class="browse-load-more" id="mpLoadMore" style="display:none"><button class="save-btn" id="mpLoadMoreBtn">Load More</button><span id="mpLoadMoreMeta"></span></div>
+      </div>
+    </section>
+
+    <!-- ══ SCREENSHOTS ══ -->
+    <section class="tab-panel" id="tab-screenshots">
+      <div class="tab-header">
+        <h2 class="tab-title">Screenshots</h2>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="select-wrapper">
+            <select id="screenshotsProfileSelect" class="version-select" style="min-width:200px"><option value="">Select profile…</option></select>
+            <svg class="select-arrow" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+          </div>
+          <button class="save-btn" id="openScreensFolderBtn">Open Folder</button>
+          <button class="save-btn" id="refreshScreensBtn">Refresh</button>
+        </div>
+      </div>
+      <div class="screenshots-state" id="screenshotsEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="52" height="52" style="color:var(--text3)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+        <p>Select a profile to view screenshots</p>
+        <span>Screenshots are saved in the profile's screenshots/ folder</span>
+      </div>
+      <div class="screenshots-state" id="screenshotsLoading" style="display:none"><div class="spinner"></div><span>Loading screenshots…</span></div>
+      <div class="screenshots-state" id="screenshotsNone" style="display:none"><p>No screenshots found</p><span>Take some screenshots in-game (F2 key)</span></div>
+      <div class="screenshots-grid" id="screenshotsGrid" style="display:none"></div>
+
+      <!-- Lightbox -->
+      <div class="lightbox" id="lightbox" style="display:none">
+        <div class="lightbox-bg" id="lightboxBg"></div>
+        <button class="lightbox-close" id="lightboxClose">×</button>
+        <button class="lightbox-nav prev" id="lightboxPrev">‹</button>
+        <img class="lightbox-img" id="lightboxImg" src="" alt=""/>
+        <div class="lightbox-caption" id="lightboxCaption"></div>
+        <button class="lightbox-nav next" id="lightboxNext">›</button>
+        <button class="lightbox-open-btn" id="lightboxOpenBtn">Open in viewer</button>
+      </div>
+    </section>
+
+    <!-- ══ SERVERS ══ -->
+    <section class="tab-panel" id="tab-servers">
+      <div class="tab-header">
+        <h2 class="tab-title">Servers</h2>
+        <div style="display:flex;gap:10px">
+          <button class="save-btn" id="pingAllBtn">Ping All</button>
+          <button class="save-btn" id="addServerBtn">+ Add Server</button>
+        </div>
+      </div>
+
+      <!-- Add server form -->
+      <div class="server-form-wrap" id="serverFormWrap" style="display:none">
+        <div class="server-form">
+          <input type="text" id="serverName" class="setting-input" placeholder="Server name" style="flex:1"/>
+          <input type="text" id="serverAddr" class="setting-input" placeholder="play.example.com:25565" style="flex:2"/>
+          <button class="save-btn" id="serverFormSave">Add</button>
+          <button class="cancel-btn" id="serverFormCancel">Cancel</button>
+        </div>
+      </div>
+
+      <div class="servers-empty" id="serversEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="color:var(--text3)"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+        <p>No servers added yet.</p>
+        <span>Add a server to check its status and player count.</span>
+      </div>
+      <div class="servers-list" id="serversList"></div>
+    </section>
+
+    <!-- ══ SETTINGS ══ -->
+    <section class="tab-panel" id="tab-settings">
+      <div class="tab-header">
+        <h2 class="tab-title">Settings</h2>
+        <button class="save-btn" id="saveSettingsBtn">Save Changes</button>
+      </div>
+      <div class="settings-grid">
+        <div class="settings-section">
+          <h3 class="section-title">Profile</h3>
+          <div class="setting-row"><label class="setting-label">Username <span class="label-hint">(offline)</span></label><input type="text" id="settingsUsername" class="setting-input" maxlength="16" placeholder="Player"/></div>
+        </div>
+        <div class="settings-section">
+          <h3 class="section-title">Memory</h3>
+          <div class="setting-row">
+            <label class="setting-label">RAM: <span id="ramLabel" class="accent-text">2048 MB</span></label>
+            <div class="ram-slider-wrap">
+              <span class="slider-min">512 MB</span>
+              <input type="range" id="ramSlider" class="ram-slider" min="512" max="16384" step="512" value="2048"/>
+              <span class="slider-max">16 GB</span>
+              <button class="suggest-btn" id="ramSuggestBtn" title="Suggest optimal RAM">💡 Suggest</button>
+            </div>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3 class="section-title">Window</h3>
+          <div class="setting-row"><label class="setting-label">Resolution</label><div class="resolution-row"><input type="number" id="settingsWidth" class="setting-input small" value="854"/> × <input type="number" id="settingsHeight" class="setting-input small" value="480"/></div></div>
+          <div class="setting-row"><label class="setting-label">Fullscreen</label><label class="toggle"><input type="checkbox" id="settingsFullscreen"/><span class="toggle-slider"></span></label></div>
+        </div>
+        <div class="settings-section">
+          <h3 class="section-title">Java</h3>
+          <div class="setting-row"><label class="setting-label">Custom Java Path <span class="label-hint">(leave blank for auto)</span></label><input type="text" id="settingsJavaPath" class="setting-input" placeholder="/usr/bin/java"/></div>
+        </div>
+        <div class="settings-section">
+          <h3 class="section-title">Updates</h3>
+          <div class="setting-row"><label class="setting-label">GitHub Repo <span class="label-hint">(for update checks)</span></label><input type="text" id="settingsUpdateRepo" class="setting-input" placeholder="owner/repo"/></div>
+          <div class="setting-row"><label class="setting-label">Check on startup</label><label class="toggle"><input type="checkbox" id="settingsCheckUpdate" checked/><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Crash modal -->
+  <div class="modal-overlay" id="crashModal" style="display:none">
+    <div class="crash-modal">
+      <div class="crash-modal-header">
+        <h3>Crash Report</h3>
+        <button class="modal-close" id="crashModalClose">×</button>
+      </div>
+      <div class="crash-summary" id="crashSummary"></div>
+      <div class="crash-details" id="crashDetails"></div>
+      <div class="crash-stack" id="crashStack"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
