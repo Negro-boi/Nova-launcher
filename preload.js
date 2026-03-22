@@ -68,6 +68,32 @@ contextBridge.exposeInMainWorld('launcher', {
   saveServers: (servers) => ipcRenderer.invoke('save-servers', servers),
   pingServer:  (opts)    => ipcRenderer.invoke('ping-server', opts),
 
+  // Resource Packs
+  getResourcePacks:            (opts) => ipcRenderer.invoke('get-resourcepacks', opts),
+  toggleResourcePack:          (opts) => ipcRenderer.invoke('toggle-resourcepack', opts),
+  addResourcePack:             (opts) => ipcRenderer.invoke('add-resourcepack', opts),
+  deleteResourcePack:          (opts) => ipcRenderer.invoke('delete-resourcepack', opts),
+  openResourcePacksFolder:     (opts) => ipcRenderer.invoke('open-resourcepacks-folder', opts),
+  searchModrinthResourcePacks: (opts) => ipcRenderer.invoke('search-modrinth-resourcepacks', opts),
+  installModrinthResourcePack: (opts) => ipcRenderer.invoke('install-modrinth-resourcepack', opts),
+
+  // Shader Packs
+  getShaderPacks:             (opts) => ipcRenderer.invoke('get-shaderpacks', opts),
+  addShaderPack:              (opts) => ipcRenderer.invoke('add-shaderpack', opts),
+  deleteShaderPack:           (opts) => ipcRenderer.invoke('delete-shaderpack', opts),
+  openShaderPacksFolder:      (opts) => ipcRenderer.invoke('open-shaderpacks-folder', opts),
+  searchModrinthShaderPacks:  (opts) => ipcRenderer.invoke('search-modrinth-shaderpacks', opts),
+  installModrinthShaderPack:  (opts) => ipcRenderer.invoke('install-modrinth-shaderpack', opts),
+
+  // Worlds
+  getWorlds:      (opts) => ipcRenderer.invoke('get-worlds', opts),
+  openWorldFolder:(opts) => ipcRenderer.invoke('open-world-folder', opts),
+  deleteWorld:    (opts) => ipcRenderer.invoke('delete-world', opts),
+  backupWorld:    (opts) => ipcRenderer.invoke('backup-world', opts),
+
+  // Mod conflicts
+  checkModConflicts: (opts) => ipcRenderer.invoke('check-mod-conflicts', opts),
+
   // Dialogs
   openFileDialog: (opts) => ipcRenderer.invoke('open-file-dialog', opts),
   saveFileDialog: (opts) => ipcRenderer.invoke('save-file-dialog', opts),

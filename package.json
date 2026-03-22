@@ -1,30 +1,26 @@
 {
   "name": "nova-launcher",
-  "version": "1.0.0",
+  "version": "3.8.0",
   "description": "A fast, offline Minecraft launcher built with Electron",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build:win": "electron-builder --win",
-    "build:linux": "electron-builder --linux",
-    "build:mac": "electron-builder --mac"
+    "build:win": "electron-builder --win"
   },
   "build": {
     "appId": "com.nova.launcher",
     "productName": "Nova Launcher",
     "icon": "assets/icon",
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "assets/icon.ico"
-    },
-    "linux": {
-      "target": [{ "target": "AppImage", "arch": ["x64"] }],
-      "icon": "assets/icon.png",
-      "category": "Game"
-    },
-    "mac": {
-      "target": [{ "target": "dmg", "arch": ["x64", "arm64"] }],
-      "icon": "assets/icon.icns"
     },
     "nsis": {
       "oneClick": false,
@@ -41,7 +37,13 @@
     ],
     "extraResources": []
   },
-  "keywords": ["minecraft", "launcher", "electron", "offline", "cracked"],
+  "keywords": [
+    "minecraft",
+    "launcher",
+    "electron",
+    "offline",
+    "cracked"
+  ],
   "author": "Negro-boi",
   "license": "MIT",
   "dependencies": {

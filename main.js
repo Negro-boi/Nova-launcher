@@ -17,7 +17,7 @@ const PROFILES_FILE  = path.join(LAUNCHER_DIR, 'profiles.json');
 const SERVERS_FILE   = path.join(LAUNCHER_DIR, 'servers.json');
 const SETTINGS_FILE  = path.join(LAUNCHER_DIR, 'settings.json');
 
-let packageVersion = '1.0.0';
+let packageVersion = '3.8.0';
 try { packageVersion = require('./package.json').version; } catch {}
 
 async function ensureDirs() {
@@ -300,7 +300,7 @@ ipcMain.handle('get-mod-profiles', async (_, { gameDir }) => {
 });
 
 ipcMain.handle('get-mods', async (_, { gameDir, profile }) => {
-  const modsDir = path.join(gameDir || MC_DIR, 'mods', profile);
+  const modsDir = path.join(gameDir || MC_DIR, 'mods');
   if (!await fs.pathExists(modsDir)) return [];
   const files = await fs.readdir(modsDir);
   const mods = [];
@@ -313,19 +313,19 @@ ipcMain.handle('get-mods', async (_, { gameDir, profile }) => {
 });
 
 ipcMain.handle('add-mod', async (_, { gameDir, profile, srcPath }) => {
-  const modsDir = path.join(gameDir || MC_DIR, 'mods', profile);
+  const modsDir = path.join(gameDir || MC_DIR, 'mods');
   await fs.ensureDir(modsDir);
   await fs.copy(srcPath, path.join(modsDir, path.basename(srcPath)));
   return { success: true };
 });
 
 ipcMain.handle('delete-mod', async (_, { gameDir, profile, file }) => {
-  await fs.remove(path.join(gameDir || MC_DIR, 'mods', profile, file));
+  await fs.remove(path.join(gameDir || MC_DIR, 'mods', file));
   return { success: true };
 });
 
 ipcMain.handle('toggle-mod', async (_, { gameDir, profile, file, enabled }) => {
-  const modsDir = path.join(gameDir || MC_DIR, 'mods', profile);
+  const modsDir = path.join(gameDir || MC_DIR, 'mods');
   const oldPath = path.join(modsDir, file);
   const newPath = enabled
     ? path.join(modsDir, file.replace('.disabled', ''))
@@ -335,7 +335,7 @@ ipcMain.handle('toggle-mod', async (_, { gameDir, profile, file, enabled }) => {
 });
 
 ipcMain.handle('open-mods-folder', async (_, { gameDir, profile }) => {
-  const modsDir = path.join(gameDir || MC_DIR, 'mods', profile);
+  const modsDir = path.join(gameDir || MC_DIR, 'mods');
   await fs.ensureDir(modsDir);
   shell.openPath(modsDir);
   return true;
@@ -343,7 +343,7 @@ ipcMain.handle('open-mods-folder', async (_, { gameDir, profile }) => {
 
 // ── Mod update checker (Modrinth hash API) ───────────────────────────────────
 ipcMain.handle('check-mod-updates', async (_, { gameDir, profile }) => {
-  const modsDir = path.join(gameDir || MC_DIR, 'mods', profile);
+  const modsDir = path.join(gameDir || MC_DIR, 'mods');
   if (!await fs.pathExists(modsDir)) return { updates: [], checked: 0 };
 
   const files = (await fs.readdir(modsDir)).filter(f => f.endsWith('.jar'));
@@ -393,7 +393,7 @@ ipcMain.handle('check-mod-updates', async (_, { gameDir, profile }) => {
 });
 
 ipcMain.handle('update-mod', async (_, { gameDir, profile, oldFilename, newFileUrl, newFilename }) => {
-  const modsDir = path.join(gameDir || MC_DIR, 'mods', profile);
+  const modsDir = path.join(gameDir || MC_DIR, 'mods');
   const destPath = path.join(modsDir, newFilename);
   try {
     await downloadFileWithProgress(newFileUrl, destPath, () => {});
@@ -501,7 +501,7 @@ ipcMain.handle('search-modrinth', async (_, { query = '', mcVersion = '', loader
 
 ipcMain.handle('install-modrinth-mod', async (_, { projectId, mcVersion, loader, gameDir, profile }) => {
   try {
-    const modsDir = path.join(gameDir || MC_DIR, 'mods', profile);
+    const modsDir = path.join(gameDir || MC_DIR, 'mods');
     await fs.ensureDir(modsDir);
     const loaderParam = (loader && loader !== 'vanilla' && loader !== 'optifine') ? loader : '';
     let versionsUrl = `https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}/version`;
@@ -729,6 +729,300 @@ ipcMain.handle('ping-server', async (_, { host, port = 25565 }) => {
   return pingMinecraftServer(host, parseInt(port, 10) || 25565);
 });
 
+// ── Resource Packs ────────────────────────────────────────────────────────────
+ipcMain.handle('get-resourcepacks', async (_, { gameDir }) => {
+  const rpDir = path.join(gameDir || MC_DIR, 'resourcepacks');
+  await fs.ensureDir(rpDir);
+  const entries = await fs.readdir(rpDir);
+  const enabled = await getEnabledResourcePacks(gameDir || MC_DIR);
+  const packs = [];
+  for (const f of entries) {
+    if (f === 'server-resource-packs') continue;
+    try {
+      const stat = await fs.stat(path.join(rpDir, f));
+      const isZip = f.endsWith('.zip');
+      const isDir = stat.isDirectory();
+      if (!isZip && !isDir) continue;
+      packs.push({
+        name: f,
+        size: isZip ? stat.size : 0,
+        isDir,
+        enabled: enabled.includes(`file/${f}`),
+        mtime: stat.mtimeMs,
+      });
+    } catch {}
+  }
+  return packs.sort((a, b) => b.mtime - a.mtime);
+});
+
+async function getEnabledResourcePacks(gameDir) {
+  const optPath = path.join(gameDir, 'options.txt');
+  try {
+    const content = await fs.readFile(optPath, 'utf8');
+    const line = content.split('\n').find(l => l.startsWith('resourcePacks:'));
+    if (!line) return [];
+    const match = line.match(/resourcePacks:\[(.*)\]/);
+    if (!match) return [];
+    return match[1].split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+  } catch { return []; }
+}
+
+async function setEnabledResourcePacks(gameDir, packs) {
+  const optPath = path.join(gameDir, 'options.txt');
+  try {
+    let content = '';
+    if (await fs.pathExists(optPath)) content = await fs.readFile(optPath, 'utf8');
+    const line = `resourcePacks:[${packs.map(p => `"${p}"`).join(',')}]`;
+    if (content.includes('resourcePacks:')) {
+      content = content.replace(/resourcePacks:\[.*\]/, line);
+    } else {
+      content += '\n' + line;
+    }
+    await fs.writeFile(optPath, content, 'utf8');
+  } catch {}
+}
+
+ipcMain.handle('toggle-resourcepack', async (_, { gameDir, name, enabled }) => {
+  const root = gameDir || MC_DIR;
+  const current = await getEnabledResourcePacks(root);
+  const key = `file/${name}`;
+  let updated;
+  if (enabled) updated = current.includes(key) ? current : [...current, key];
+  else updated = current.filter(p => p !== key);
+  await setEnabledResourcePacks(root, updated);
+  return { success: true };
+});
+
+ipcMain.handle('add-resourcepack', async (_, { gameDir, srcPath }) => {
+  const rpDir = path.join(gameDir || MC_DIR, 'resourcepacks');
+  await fs.ensureDir(rpDir);
+  await fs.copy(srcPath, path.join(rpDir, path.basename(srcPath)));
+  return { success: true };
+});
+
+ipcMain.handle('delete-resourcepack', async (_, { gameDir, name }) => {
+  await fs.remove(path.join(gameDir || MC_DIR, 'resourcepacks', name));
+  return { success: true };
+});
+
+ipcMain.handle('open-resourcepacks-folder', async (_, { gameDir }) => {
+  const dir = path.join(gameDir || MC_DIR, 'resourcepacks');
+  await fs.ensureDir(dir);
+  shell.openPath(dir);
+  return true;
+});
+
+// ── Shader Packs ──────────────────────────────────────────────────────────────
+ipcMain.handle('get-shaderpacks', async (_, { gameDir }) => {
+  const spDir = path.join(gameDir || MC_DIR, 'shaderpacks');
+  await fs.ensureDir(spDir);
+  const entries = await fs.readdir(spDir);
+  const packs = [];
+  for (const f of entries) {
+    try {
+      const stat = await fs.stat(path.join(spDir, f));
+      const isZip = f.endsWith('.zip');
+      const isDir = stat.isDirectory();
+      if (!isZip && !isDir) continue;
+      packs.push({ name: f, size: isZip ? stat.size : 0, isDir, mtime: stat.mtimeMs });
+    } catch {}
+  }
+  return packs.sort((a, b) => b.mtime - a.mtime);
+});
+
+ipcMain.handle('add-shaderpack', async (_, { gameDir, srcPath }) => {
+  const spDir = path.join(gameDir || MC_DIR, 'shaderpacks');
+  await fs.ensureDir(spDir);
+  await fs.copy(srcPath, path.join(spDir, path.basename(srcPath)));
+  return { success: true };
+});
+
+ipcMain.handle('delete-shaderpack', async (_, { gameDir, name }) => {
+  await fs.remove(path.join(gameDir || MC_DIR, 'shaderpacks', name));
+  return { success: true };
+});
+
+ipcMain.handle('open-shaderpacks-folder', async (_, { gameDir }) => {
+  const dir = path.join(gameDir || MC_DIR, 'shaderpacks');
+  await fs.ensureDir(dir);
+  shell.openPath(dir);
+  return true;
+});
+
+// ── Modrinth Resource Pack Browser ───────────────────────────────────────────
+ipcMain.handle('search-modrinth-resourcepacks', async (_, { query = '', mcVersion = '', offset = 0 }) => {
+  try {
+    const facets = [['project_type:resourcepack']];
+    if (mcVersion) facets.push([`versions:${mcVersion}`]);
+    const params = new URLSearchParams({
+      query,
+      facets: JSON.stringify(facets),
+      limit: '20',
+      offset: String(offset),
+      index: 'relevance',
+    });
+    const url = `https://api.modrinth.com/v2/search?${params}`;
+    const data = await fetchJson(url);
+    return { hits: data.hits || [], total: data.total_hits || 0 };
+  } catch (e) { return { hits: [], total: 0, error: e.message }; }
+});
+
+ipcMain.handle('install-modrinth-resourcepack', async (_, { projectId, mcVersion, gameDir }) => {
+  try {
+    const rpDir = path.join(gameDir || MC_DIR, 'resourcepacks');
+    await fs.ensureDir(rpDir);
+    let versionsUrl = `https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}/version`;
+    if (mcVersion) versionsUrl += `?game_versions=${encodeURIComponent(JSON.stringify([mcVersion]))}`;
+    const versions = await fetchJson(versionsUrl);
+    if (!versions?.length) return { success: false, error: `No version found for MC ${mcVersion}` };
+    const file = versions[0].files.find(f => f.primary) || versions[0].files[0];
+    if (!file) return { success: false, error: 'No downloadable file' };
+    const destPath = path.join(rpDir, file.filename);
+    if (await fs.pathExists(destPath)) return { success: true, alreadyInstalled: true, filename: file.filename };
+    await downloadFileWithProgress(file.url, destPath, p =>
+      mainWindow.webContents.send('modrinth-install-progress', { projectId, ...p, filename: file.filename }));
+    return { success: true, filename: file.filename };
+  } catch (e) { return { success: false, error: e.message }; }
+});
+
+// ── Modrinth Shader Pack Browser ─────────────────────────────────────────────
+ipcMain.handle('search-modrinth-shaderpacks', async (_, { query = '', mcVersion = '', offset = 0 }) => {
+  try {
+    const facets = [['project_type:shader']];
+    if (mcVersion) facets.push([`versions:${mcVersion}`]);
+    const params = new URLSearchParams({
+      query,
+      facets: JSON.stringify(facets),
+      limit: '20',
+      offset: String(offset),
+      index: 'relevance',
+    });
+    const url = `https://api.modrinth.com/v2/search?${params}`;
+    const data = await fetchJson(url);
+    return { hits: data.hits || [], total: data.total_hits || 0 };
+  } catch (e) { return { hits: [], total: 0, error: e.message }; }
+});
+
+ipcMain.handle('install-modrinth-shaderpack', async (_, { projectId, mcVersion, gameDir }) => {
+  try {
+    const spDir = path.join(gameDir || MC_DIR, 'shaderpacks');
+    await fs.ensureDir(spDir);
+    let versionsUrl = `https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}/version`;
+    if (mcVersion) versionsUrl += `?game_versions=${encodeURIComponent(JSON.stringify([mcVersion]))}`;
+    const versions = await fetchJson(versionsUrl);
+    if (!versions?.length) return { success: false, error: `No version found for MC ${mcVersion}` };
+    const file = versions[0].files.find(f => f.primary) || versions[0].files[0];
+    if (!file) return { success: false, error: 'No downloadable file' };
+    const destPath = path.join(spDir, file.filename);
+    if (await fs.pathExists(destPath)) return { success: true, alreadyInstalled: true, filename: file.filename };
+    await downloadFileWithProgress(file.url, destPath, p =>
+      mainWindow.webContents.send('modrinth-install-progress', { projectId, ...p, filename: file.filename }));
+    return { success: true, filename: file.filename };
+  } catch (e) { return { success: false, error: e.message }; }
+});
+
+// ── Worlds ────────────────────────────────────────────────────────────────────
+ipcMain.handle('get-worlds', async (_, { gameDir }) => {
+  const savesDir = path.join(gameDir || MC_DIR, 'saves');
+  if (!await fs.pathExists(savesDir)) return [];
+  const entries = await fs.readdir(savesDir);
+  const worlds = [];
+  for (const folder of entries) {
+    const worldPath = path.join(savesDir, folder);
+    try {
+      const stat = await fs.stat(worldPath);
+      if (!stat.isDirectory()) continue;
+      const levelDatPath = path.join(worldPath, 'level.dat');
+      let info = { levelName: folder, gameType: null, seed: null, lastPlayed: null };
+      if (await fs.pathExists(levelDatPath)) {
+        const parsed = await parseLevelDat(levelDatPath);
+        if (parsed) info = { ...info, ...parsed };
+      }
+      worlds.push({
+        folder,
+        path: worldPath,
+        ...info,
+        mtime: stat.mtimeMs,
+      });
+    } catch {}
+  }
+  return worlds.sort((a, b) => (b.lastPlayed || b.mtime) - (a.lastPlayed || a.mtime));
+});
+
+ipcMain.handle('open-world-folder', async (_, { worldPath }) => {
+  shell.openPath(worldPath);
+  return true;
+});
+
+ipcMain.handle('delete-world', async (_, { worldPath }) => {
+  await fs.remove(worldPath);
+  return { success: true };
+});
+
+ipcMain.handle('backup-world', async (_, { worldPath, worldName }) => {
+  try {
+    let archiver;
+    try { archiver = require('archiver'); } catch { return { success: false, error: 'archiver not installed. Run: npm install archiver' }; }
+    const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const dest = path.join(LAUNCHER_DIR, 'world-backups', `${worldName}-${ts}.zip`);
+    await fs.ensureDir(path.dirname(dest));
+    const output  = require('fs').createWriteStream(dest);
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    return new Promise((resolve) => {
+      output.on('close', () => resolve({ success: true, path: dest }));
+      archive.on('error', e => resolve({ success: false, error: e.message }));
+      archive.pipe(output);
+      archive.directory(worldPath, worldName);
+      archive.finalize();
+    });
+  } catch (e) { return { success: false, error: e.message }; }
+});
+
+// ── Mod conflict detector ─────────────────────────────────────────────────────
+ipcMain.handle('check-mod-conflicts', async (_, { gameDir, profile }) => {
+  const modsDir = path.join(gameDir || MC_DIR, 'mods');
+  if (!await fs.pathExists(modsDir)) return { conflicts: [], checked: 0 };
+
+  const files = (await fs.readdir(modsDir)).filter(f => f.endsWith('.jar'));
+  if (!files.length) return { conflicts: [], checked: 0 };
+
+  const hashToFile = {};
+  for (const f of files) {
+    try { hashToFile[await computeSHA512(path.join(modsDir, f))] = f; } catch {}
+  }
+  const hashes = Object.keys(hashToFile);
+  if (!hashes.length) return { conflicts: [], checked: 0 };
+
+  try {
+    const found = await fetchJsonPost('https://api.modrinth.com/v2/version_files', { hashes, algorithm: 'sha512' });
+    // Map file → project_id
+    const fileToProject = {};
+    const projectIdSet  = new Set();
+    Object.entries(found).forEach(([hash, v]) => {
+      fileToProject[hashToFile[hash]] = v.project_id;
+      projectIdSet.add(v.project_id);
+    });
+
+    const conflicts = [];
+    const seen = new Set();
+
+    for (const [hash, versionInfo] of Object.entries(found)) {
+      const filename = hashToFile[hash];
+      for (const dep of (versionInfo.dependencies || [])) {
+        if (dep.dependency_type === 'incompatible' && dep.project_id && projectIdSet.has(dep.project_id)) {
+          const conflictFile = Object.entries(fileToProject).find(([, pid]) => pid === dep.project_id)?.[0] || dep.project_id;
+          const key = [filename, conflictFile].sort().join('|');
+          if (!seen.has(key)) {
+            seen.add(key);
+            conflicts.push({ mod1: filename, mod2: conflictFile, reason: 'Declared incompatible on Modrinth' });
+          }
+        }
+      }
+    }
+    return { conflicts, checked: files.length, identified: Object.keys(found).length };
+  } catch (e) { return { error: e.message, conflicts: [], checked: files.length }; }
+});
+
 // ── Launch ────────────────────────────────────────────────────────────────────
 ipcMain.handle('launch-minecraft', async (_, { username, version, ram, javaPath, gameDir, width, height, fullscreen, loaderType, loaderVersion, profileId }) => {
   try {
@@ -819,6 +1113,75 @@ ipcMain.handle('launch-minecraft', async (_, { username, version, ram, javaPath,
 // ══════════════════════════════════════════════════════════════════════════════
 // HELPERS
 // ══════════════════════════════════════════════════════════════════════════════
+
+// ── NBT level.dat parser ──────────────────────────────────────────────────────
+async function parseLevelDat(filePath) {
+  try {
+    const zlib = require('zlib');
+    const raw  = await fs.readFile(filePath);
+    const buf  = zlib.gunzipSync(raw);
+
+    const levelName  = nbtFindString(buf, 'LevelName');
+    const gameType   = nbtFindInt(buf, 'GameType');
+    const seed       = nbtFindLong(buf, 'RandomSeed') || nbtFindLong(buf, 'WorldGenSettings');
+    const lastPlayed = nbtFindLong(buf, 'LastPlayed');
+
+    const gameModes = ['Survival', 'Creative', 'Adventure', 'Spectator'];
+
+    return {
+      levelName:  levelName  || null,
+      gameType:   gameType   != null ? (gameModes[gameType] || `Mode ${gameType}`) : null,
+      seed:       seed       || null,
+      lastPlayed: lastPlayed ? Number(BigInt(lastPlayed)) : null,
+    };
+  } catch { return null; }
+}
+
+function nbtFindString(buf, key) {
+  const kb = Buffer.from(key, 'utf8');
+  for (let i = 0; i < buf.length - kb.length - 5; i++) {
+    if (buf[i] === 8) {
+      const nl = buf.readUInt16BE(i + 1);
+      if (nl === kb.length && buf.slice(i + 3, i + 3 + nl).equals(kb)) {
+        const vo = i + 3 + nl;
+        if (vo + 2 > buf.length) continue;
+        const vl = buf.readUInt16BE(vo);
+        if (vo + 2 + vl > buf.length) continue;
+        return buf.slice(vo + 2, vo + 2 + vl).toString('utf8');
+      }
+    }
+  }
+  return null;
+}
+
+function nbtFindInt(buf, key) {
+  const kb = Buffer.from(key, 'utf8');
+  for (let i = 0; i < buf.length - kb.length - 7; i++) {
+    if (buf[i] === 3) {
+      const nl = buf.readUInt16BE(i + 1);
+      if (nl === kb.length && buf.slice(i + 3, i + 3 + nl).equals(kb)) {
+        return buf.readInt32BE(i + 3 + nl);
+      }
+    }
+  }
+  return null;
+}
+
+function nbtFindLong(buf, key) {
+  const kb = Buffer.from(key, 'utf8');
+  for (let i = 0; i < buf.length - kb.length - 11; i++) {
+    if (buf[i] === 4) {
+      const nl = buf.readUInt16BE(i + 1);
+      if (nl === kb.length && buf.slice(i + 3, i + 3 + nl).equals(kb)) {
+        const hi = BigInt(buf.readInt32BE(i + 3 + nl));
+        const lo = BigInt(buf.readUInt32BE(i + 3 + nl + 4));
+        return ((hi << 32n) | lo).toString();
+      }
+    }
+  }
+  return null;
+}
+
 
 function requiredJavaVersion(v) {
   const m = v.match(/^1\.(\d+)/);

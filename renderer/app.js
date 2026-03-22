@@ -60,17 +60,19 @@ let servers           = [];
 
 // ── Init ───────────────────────────────────────────────────────────────────
 (async function init() {
-  await loadSettings();
+  try { await loadSettings(); } catch(e) { console.error('loadSettings:', e); }
   setupNavigation();
   setupRamSlider();
   setupLoaderButtons();
-  await loadVersions();
-  await loadProfiles();
-  await checkJava();
-  await initMods();
-  await initBrowse();
-  await initScreenshots();
-  await initServers();
+  try { await loadVersions(); } catch(e) { console.error('loadVersions:', e); }
+  try { await loadProfiles(); } catch(e) { console.error('loadProfiles:', e); }
+  try { await checkJava(); } catch(e) { console.error('checkJava:', e); }
+  try { await initMods(); } catch(e) { console.error('initMods:', e); }
+  try { await initBrowse(); } catch(e) { console.error('initBrowse:', e); }
+  try { await initScreenshots(); } catch(e) { console.error('initScreenshots:', e); }
+  try { await initServers(); } catch(e) { console.error('initServers:', e); }
+  try { await initWorlds(); } catch(e) { console.error('initWorlds:', e); }
+  try { await initAssets(); } catch(e) { console.error('initAssets:', e); }
   setupFilterBtns();
   setupPlayBtn();
   setupSettingsSave();
@@ -92,6 +94,8 @@ function switchTab(tab) {
   if (tab === 'screenshots') refreshScreenshots();
   if (tab === 'browse') refreshBrowseProfiles();
   if (tab === 'profiles') renderProfiles();
+  if (tab === 'worlds') refreshWorlds();
+  if (tab === 'assets') refreshAssetProfiles();
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────
@@ -176,9 +180,7 @@ function populateProfileSelects() {
     const el = document.getElementById(id);
     if (!el) return;
     const prev = el.value;
-    el.innerHTML = id === 'modsProfileSelect'
-      ? '<option value="">Select a loader profile…</option>'
-      : '<option value="">Select profile…</option>';
+    el.innerHTML = '<option value="">Select profile…</option>';
     profiles.forEach(p => el.appendChild(new Option(p.name, p.id)));
     if (prev && profiles.find(pr => pr.id === prev)) el.value = prev;
   });
@@ -656,34 +658,37 @@ function showCrashModal(analysis) {
 async function initMods() {
   await refreshModProfiles();
   document.getElementById('modsProfileSelect').addEventListener('change', async (e) => {
-    currentModProfile = e.target.value; await renderMods();
+    currentModProfile = e.target.value;
+    await renderMods();
   });
   document.getElementById('openModsFolderBtn').addEventListener('click', () => {
     if (!currentModProfile) return toast('Select a profile first.', 'err');
     const gd = getGameDirForModProfile();
-    window.launcher.openModsFolder({ gameDir: gd, profile: currentModProfile });
+    window.launcher.openModsFolder({ gameDir: gd });
   });
   document.getElementById('checkUpdatesBtn').addEventListener('click', checkModUpdates);
+  document.getElementById('checkConflictsBtn').addEventListener('click', checkModConflicts);
   document.getElementById('modUpdatesDismiss').addEventListener('click', () =>
     document.getElementById('modUpdatesBar').style.display = 'none');
+  document.getElementById('modConflictsDismiss').addEventListener('click', () =>
+    document.getElementById('modConflictsBar').style.display = 'none');
   setupModFileInput(); setupModDragDrop();
 }
 
 function getGameDirForModProfile() {
-  // Try to find gameDir from active profile; fallback to settings
-  const ap = profiles.find(p => p.id === activeProfileId);
-  return ap?.gameDir || settings.gameDir || '';
+  const ap = profiles.find(p => p.id === currentModProfile)
+           || profiles.find(p => p.id === activeProfileId);
+  return (ap && ap.gameDir && ap.gameDir !== '') ? ap.gameDir : '';
 }
 
 async function refreshModProfiles() {
-  // Mods profiles come from the versions/ folder of the active profile's gameDir
-  const gd    = getGameDirForModProfile();
-  const profs = await window.launcher.getModProfiles({ gameDir: gd });
-  const sel   = document.getElementById('modsProfileSelect');
-  const prev  = sel.value;
-  sel.innerHTML = '<option value="">Select a profile…</option>';
-  profs.forEach(p => sel.appendChild(new Option(p, p)));
-  if (prev && profs.includes(prev)) sel.value = prev;
+  // modsProfileSelect is already populated by loadProfiles() — just sync currentModProfile
+  const sel = document.getElementById('modsProfileSelect');
+  if (!sel.value && activeProfileId) sel.value = activeProfileId;
+  if (sel.value && sel.value !== currentModProfile) {
+    currentModProfile = sel.value;
+    await renderMods();
+  }
 }
 
 async function renderMods() {
@@ -693,7 +698,7 @@ async function renderMods() {
   if (!currentModProfile) { empty.style.display = ''; list.style.display = 'none'; return; }
   empty.style.display = 'none'; list.style.display = '';
   const gd   = getGameDirForModProfile();
-  const mods = await window.launcher.getMods({ gameDir: gd, profile: currentModProfile });
+  const mods = await window.launcher.getMods({ gameDir: gd });
   body.innerHTML = '';
   if (!mods.length) {
     body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">No mods installed.</div>'; return;
@@ -708,13 +713,13 @@ async function renderMods() {
       <div><label class="toggle"><input type="checkbox" ${mod.enabled ? 'checked' : ''}/><span class="toggle-slider"></span></label></div>
       <button class="mod-delete" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14H6L5,6"/><path d="M10,11v6M14,11v6"/><path d="M9,6V4h6v2"/></svg></button>`;
     row.querySelector('input').addEventListener('change', async (e) => {
-      await window.launcher.toggleMod({ gameDir: gd, profile: currentModProfile, file: mod.file, enabled: e.target.checked });
+      await window.launcher.toggleMod({ gameDir: gd, file: mod.file, enabled: e.target.checked });
       mod.enabled = e.target.checked; row.classList.toggle('disabled', !mod.enabled);
       mod.file = e.target.checked ? mod.file.replace('.disabled','') : mod.file + '.disabled';
     });
     row.querySelector('.mod-delete').addEventListener('click', async () => {
       if (!confirm(`Delete ${mod.name}?`)) return;
-      await window.launcher.deleteMod({ gameDir: gd, profile: currentModProfile, file: mod.file });
+      await window.launcher.deleteMod({ gameDir: gd, file: mod.file });
       await renderMods(); toast(`Deleted ${mod.name}`, 'ok');
     });
     body.appendChild(row);
@@ -728,7 +733,7 @@ async function checkModUpdates() {
   bar.style.display = ''; txt.textContent = 'Checking for mod updates…';
   document.getElementById('updateAllModsBtn').style.display = 'none';
   const gd = getGameDirForModProfile();
-  const r  = await window.launcher.checkModUpdates({ gameDir: gd, profile: currentModProfile });
+  const r  = await window.launcher.checkModUpdates({ gameDir: gd });
   if (r.error) { txt.textContent = `Error: ${r.error}`; return; }
   if (!r.updates.length) {
     txt.textContent = `All ${r.checked} mods are up to date ✓`;
@@ -739,7 +744,7 @@ async function checkModUpdates() {
     allBtn.onclick = async () => {
       allBtn.disabled = true; allBtn.textContent = 'Updating…';
       for (const u of r.updates) {
-        await window.launcher.updateMod({ gameDir: gd, profile: currentModProfile, oldFilename: u.filename, newFileUrl: u.latestFileUrl, newFilename: u.latestFilename });
+        await window.launcher.updateMod({ gameDir: gd, oldFilename: u.filename, newFileUrl: u.latestFileUrl, newFilename: u.latestFilename });
         toast(`Updated: ${u.filename} → ${u.latestVersion}`, 'ok');
       }
       await renderMods(); txt.textContent = `Updated ${r.updates.length} mod${r.updates.length > 1 ? 's' : ''} ✓`;
@@ -752,7 +757,7 @@ function setupModFileInput() {
   document.getElementById('modFileInput').addEventListener('change', async (e) => {
     if (!currentModProfile) return toast('Select a profile first.', 'err');
     const gd = getGameDirForModProfile();
-    for (const f of e.target.files) await window.launcher.addMod({ gameDir: gd, profile: currentModProfile, srcPath: f.path });
+    for (const f of e.target.files) await window.launcher.addMod({ gameDir: gd, srcPath: f.path });
     await renderMods(); toast(`Added ${e.target.files.length} mod(s)`, 'ok'); e.target.value = '';
   });
 }
@@ -768,7 +773,7 @@ function setupModDragDrop() {
     const files = [...e.dataTransfer.files].filter(f => f.name.endsWith('.jar'));
     if (!files.length) return toast('Only .jar files.', 'err');
     const gd = getGameDirForModProfile();
-    for (const f of files) await window.launcher.addMod({ gameDir: gd, profile: currentModProfile, srcPath: f.path });
+    for (const f of files) await window.launcher.addMod({ gameDir: gd, srcPath: f.path });
     await renderMods(); toast(`Added ${files.length} mod(s)`, 'ok');
   });
 }
@@ -778,9 +783,9 @@ async function initBrowse() {
   await refreshBrowseProfiles();
 
   // Sub-tab switching
-  document.querySelectorAll('.browse-tab').forEach(btn =>
+  document.querySelectorAll('.browse-tab[data-btab]').forEach(btn =>
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.browse-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.browse-tab[data-btab]').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.browse-panel').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('browse-' + btn.dataset.btab)?.classList.add('active');
@@ -891,12 +896,10 @@ async function installModrinthMod(projectId, title, btn) {
   if (!profileId) return toast('Select an install profile.', 'err');
   const ap = profiles.find(p => p.id === profileId);
   // Need a loader-versioned mod profile (mods subfolder)
-  const modProfiles = await window.launcher.getModProfiles({ gameDir: ap?.gameDir });
-  const profile = modProfiles[0] || '';
-  if (!profile) return toast('No Fabric/Forge profile found. Launch the game once first.', 'err');
+  const profile = ''; // mods now go directly to gameDir/mods/
   browseInstalling[projectId] = true;
   btn.disabled = true; btn.classList.add('installing'); btn.innerHTML = '<div class="spinner" style="width:10px;height:10px;border-width:2px"></div> Installing…';
-  const r = await window.launcher.installModrinthMod({ projectId, mcVersion: mv, loader: ld, gameDir: ap?.gameDir, profile });
+  const r = await window.launcher.installModrinthMod({ projectId, mcVersion: mv, loader: ld, gameDir: ap?.gameDir });
   browseInstalling[projectId] = false;
   if (r.success) { btn.innerHTML = '✓ Installed'; btn.classList.remove('installing'); btn.classList.add('installed'); toast(`${title} installed!`, 'ok'); }
   else { btn.disabled = false; btn.classList.remove('installing'); btn.innerHTML = 'Install'; toast(`Failed: ${r.error}`, 'err'); }
@@ -1118,4 +1121,361 @@ function toast(msg, type = '') {
   el.textContent = msg; el.className = `toast show${type ? ' ' + type : ''}`;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── Worlds ────────────────────────────────────────────────────────────────────
+let currentWorldsGameDir = '';
+
+async function initWorlds() {
+  document.getElementById('worldsProfileSelect').addEventListener('change', async (e) => {
+    const p = profiles.find(pr => pr.id === e.target.value);
+    currentWorldsGameDir = (p && p.gameDir) ? p.gameDir : '';
+    await refreshWorlds();
+  });
+  document.getElementById('refreshWorldsBtn').addEventListener('click', refreshWorlds);
+}
+
+async function refreshWorlds() {
+  if (!currentWorldsGameDir) { showWorldState('empty'); return; }
+  showWorldState('loading');
+  const worlds = await window.launcher.getWorlds({ gameDir: currentWorldsGameDir });
+  if (!worlds.length) { showWorldState('none'); return; }
+  showWorldState('grid');
+  const grid = document.getElementById('worldsGrid');
+  grid.innerHTML = '';
+  worlds.forEach((w, i) => {
+    const card = document.createElement('div');
+    card.className = 'world-card';
+    card.style.animationDelay = `${i * 0.04}s`;
+    const lastDate = w.lastPlayed ? new Date(w.lastPlayed).toLocaleDateString() : 'Unknown';
+    card.innerHTML = `
+      <div class="world-card-icon">🌍</div>
+      <div class="world-card-body">
+        <div class="world-card-name">${escapeHtml(w.levelName || w.folder)}</div>
+        <div class="world-card-meta">
+          <span class="wc-badge">${escapeHtml(w.gameType || 'Unknown')}</span>
+          ${w.seed ? `<span class="wc-badge seed" title="Seed">🌱 ${escapeHtml(String(w.seed).slice(0, 12))}</span>` : ''}
+        </div>
+        <div class="world-card-date">Last played: ${lastDate}</div>
+      </div>
+      <div class="world-card-actions">
+        <button class="wc-btn" title="Open folder">📂</button>
+        <button class="wc-btn" title="Backup world">💾</button>
+        <button class="wc-btn danger" title="Delete world">🗑</button>
+      </div>`;
+    const [btnOpen, btnBackup, btnDel] = card.querySelectorAll('.wc-btn');
+    btnOpen.addEventListener('click', () =>
+      window.launcher.openWorldFolder({ worldPath: w.path }));
+    btnBackup.addEventListener('click', async () => {
+      btnBackup.textContent = '⏳';
+      const r = await window.launcher.backupWorld({ worldPath: w.path, worldName: w.levelName || w.folder });
+      btnBackup.textContent = '💾';
+      if (r.success) toast(`Backed up to: ${r.path}`, 'ok');
+      else toast(`Backup failed: ${r.error}`, 'err');
+    });
+    btnDel.addEventListener('click', async () => {
+      if (!confirm(`Delete world "${w.levelName || w.folder}"? This cannot be undone!`)) return;
+      await window.launcher.deleteWorld({ worldPath: w.path });
+      await refreshWorlds();
+      toast('World deleted.', 'ok');
+    });
+    grid.appendChild(card);
+  });
+}
+
+function showWorldState(state) {
+  document.getElementById('worldsEmpty').style.display   = state === 'empty'   ? '' : 'none';
+  document.getElementById('worldsLoading').style.display = state === 'loading' ? '' : 'none';
+  document.getElementById('worldsNone').style.display    = state === 'none'    ? '' : 'none';
+  document.getElementById('worldsGrid').style.display    = state === 'grid'    ? '' : 'none';
+}
+
+// ── Assets (ResourcePacks + ShaderPacks) ──────────────────────────────────────
+let currentRpGameDir = '';
+let currentSpGameDir = '';
+
+async function initAssets() {
+  // Outer sub-tab switching (Resource Packs / Shader Packs)
+  document.querySelectorAll('.browse-tab[data-atab]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.browse-tab[data-atab]').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.assets-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('assets-' + btn.dataset.atab)?.classList.add('active');
+    }));
+
+  // Inner sub-tabs: Installed / Browse (Resource Packs)
+  document.querySelectorAll('.assets-inner-tab[data-rptab]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.assets-inner-tab[data-rptab]').forEach(b => b.classList.remove('active'));
+      document.getElementById('rp-installed').classList.remove('active');
+      document.getElementById('rp-browse').classList.remove('active');
+      btn.classList.add('active');
+      document.getElementById('rp-' + btn.dataset.rptab)?.classList.add('active');
+    }));
+
+  // Inner sub-tabs: Installed / Browse (Shader Packs)
+  document.querySelectorAll('.assets-inner-tab[data-sptab]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.assets-inner-tab[data-sptab]').forEach(b => b.classList.remove('active'));
+      document.getElementById('sp-installed').classList.remove('active');
+      document.getElementById('sp-browse').classList.remove('active');
+      btn.classList.add('active');
+      document.getElementById('sp-' + btn.dataset.sptab)?.classList.add('active');
+    }));
+
+  document.getElementById('rpProfileSelect').addEventListener('change', async (e) => {
+    const p = profiles.find(pr => pr.id === e.target.value);
+    currentRpGameDir = (p && p.gameDir) ? p.gameDir : '';
+    await refreshResourcePacks();
+  });
+  document.getElementById('spProfileSelect').addEventListener('change', async (e) => {
+    const p = profiles.find(pr => pr.id === e.target.value);
+    currentSpGameDir = (p && p.gameDir) ? p.gameDir : '';
+    await refreshShaderPacks();
+  });
+  document.getElementById('openRpFolderBtn').addEventListener('click', () => {
+    if (currentRpGameDir) window.launcher.openResourcePacksFolder({ gameDir: currentRpGameDir });
+    else toast('Select a profile first.', 'err');
+  });
+  document.getElementById('openSpFolderBtn').addEventListener('click', () => {
+    if (currentSpGameDir) window.launcher.openShaderPacksFolder({ gameDir: currentSpGameDir });
+    else toast('Select a profile first.', 'err');
+  });
+  document.getElementById('rpFileInput').addEventListener('change', async (e) => {
+    if (!currentRpGameDir) return toast('Select a profile first.', 'err');
+    for (const f of e.target.files)
+      await window.launcher.addResourcePack({ gameDir: currentRpGameDir, srcPath: f.path });
+    await refreshResourcePacks();
+    toast('Resource pack added!', 'ok');
+    e.target.value = '';
+  });
+  document.getElementById('spFileInput').addEventListener('change', async (e) => {
+    if (!currentSpGameDir) return toast('Select a profile first.', 'err');
+    for (const f of e.target.files)
+      await window.launcher.addShaderPack({ gameDir: currentSpGameDir, srcPath: f.path });
+    await refreshShaderPacks();
+    toast('Shader pack added!', 'ok');
+    e.target.value = '';
+  });
+
+  // ── Browse wiring ────────────────────────────────────────────────────────
+  let rpBrowseOffset = 0, spBrowseOffset = 0;
+  const rpInstalling = {}, spInstalling = {};
+
+  async function doRpSearch(append) {
+    const q  = document.getElementById('rpBrowseSearch').value.trim();
+    const mv = document.getElementById('rpBrowseVersion').value;
+    if (!append) { rpBrowseOffset = 0; document.getElementById('rpBrowseResults').innerHTML = ''; }
+    const res = await window.launcher.searchModrinthResourcePacks({ query: q, mcVersion: mv, offset: rpBrowseOffset });
+    renderAssetCards(res.hits || [], 'rpBrowseResults', rpInstalling, async (id, title, btn) => {
+      const profileId = document.getElementById('rpBrowseInstallProfile').value;
+      if (!profileId) return toast('Select install profile first.', 'err');
+      const p = profiles.find(pr => pr.id === profileId);
+      rpInstalling[id] = true; btn.disabled = true; btn.classList.add('installing'); btn.textContent = 'Installing…';
+      const r = await window.launcher.installModrinthResourcePack({ projectId: id, mcVersion: mv, gameDir: p?.gameDir || '' });
+      rpInstalling[id] = false;
+      if (r.success) { btn.textContent = '✓ Installed'; btn.classList.add('installed'); btn.disabled = true; toast(`${title} installed!`, 'ok'); }
+      else { btn.disabled = false; btn.classList.remove('installing'); btn.textContent = 'Install'; toast(`Failed: ${r.error}`, 'err'); }
+    });
+    document.getElementById('rpLoadMoreBar').style.display = (res.hits?.length === 20) ? '' : 'none';
+  }
+
+  async function doSpSearch(append) {
+    const q  = document.getElementById('spBrowseSearch').value.trim();
+    const mv = document.getElementById('spBrowseVersion').value;
+    if (!append) { spBrowseOffset = 0; document.getElementById('spBrowseResults').innerHTML = ''; }
+    const res = await window.launcher.searchModrinthShaderPacks({ query: q, mcVersion: mv, offset: spBrowseOffset });
+    renderAssetCards(res.hits || [], 'spBrowseResults', spInstalling, async (id, title, btn) => {
+      const profileId = document.getElementById('spBrowseInstallProfile').value;
+      if (!profileId) return toast('Select install profile first.', 'err');
+      const p = profiles.find(pr => pr.id === profileId);
+      spInstalling[id] = true; btn.disabled = true; btn.classList.add('installing'); btn.textContent = 'Installing…';
+      const r = await window.launcher.installModrinthShaderPack({ projectId: id, mcVersion: mv, gameDir: p?.gameDir || '' });
+      spInstalling[id] = false;
+      if (r.success) { btn.textContent = '✓ Installed'; btn.classList.add('installed'); btn.disabled = true; toast(`${title} installed!`, 'ok'); }
+      else { btn.disabled = false; btn.classList.remove('installing'); btn.textContent = 'Install'; toast(`Failed: ${r.error}`, 'err'); }
+    });
+    document.getElementById('spLoadMoreBar').style.display = (res.hits?.length === 20) ? '' : 'none';
+  }
+
+  document.getElementById('rpBrowseSearchBtn').addEventListener('click', () => doRpSearch(false));
+  document.getElementById('rpBrowseSearch').addEventListener('keydown', e => e.key === 'Enter' && doRpSearch(false));
+  document.getElementById('rpLoadMoreBtn').addEventListener('click', () => { rpBrowseOffset += 20; doRpSearch(true); });
+  document.getElementById('spBrowseSearchBtn').addEventListener('click', () => doSpSearch(false));
+  document.getElementById('spBrowseSearch').addEventListener('keydown', e => e.key === 'Enter' && doSpSearch(false));
+  document.getElementById('spLoadMoreBtn').addEventListener('click', () => { spBrowseOffset += 20; doSpSearch(true); });
+
+  // Populate version dropdowns from loaded versions list
+  ['rpBrowseVersion', 'spBrowseVersion'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel || !versions?.length) return;
+    versions.filter(v => v.type === 'release').slice(0, 20).forEach(v =>
+      sel.appendChild(new Option(v.id, v.id)));
+  });
+}
+
+function renderAssetCards(hits, containerId, installing, onInstall) {
+  const container = document.getElementById(containerId);
+  if (!hits.length) {
+    if (!container.children.length)
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px">No results found.</div>';
+    return;
+  }
+  hits.forEach((hit, i) => {
+    const card = document.createElement('div');
+    card.className = 'asset-card';
+    card.style.animationDelay = `${i * 0.03}s`;
+    const dl = hit.downloads > 1000000
+      ? `${(hit.downloads/1000000).toFixed(1)}M`
+      : hit.downloads > 1000 ? `${(hit.downloads/1000).toFixed(0)}k` : hit.downloads;
+    card.innerHTML = `
+      <div class="asset-card-title">${escapeHtml(hit.title)}</div>
+      <div class="asset-card-desc">${escapeHtml(hit.description || '')}</div>
+      <div class="asset-card-meta">
+        ${(hit.categories || []).slice(0, 3).map(c => `<span class="wc-badge">${escapeHtml(c)}</span>`).join('')}
+      </div>
+      <div class="asset-card-footer">
+        <span class="asset-downloads">⬇ ${dl}</span>
+        <button class="asset-install-btn">Install</button>
+      </div>`;
+    card.querySelector('.asset-install-btn').addEventListener('click', e => {
+      if (e.target.classList.contains('installed') || e.target.disabled) return;
+      onInstall(hit.project_id, hit.title, e.target);
+    });
+    container.appendChild(card);
+  });
+}
+
+function refreshAssetProfiles() {
+  ['rpProfileSelect', 'spProfileSelect', 'worldsProfileSelect',
+   'rpBrowseInstallProfile', 'spBrowseInstallProfile'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const prev = el.value;
+    const isInstall = id.includes('Browse');
+    el.innerHTML = isInstall
+      ? '<option value="">Install to profile…</option>'
+      : '<option value="">Select profile…</option>';
+    profiles.forEach(p => el.appendChild(new Option(p.name, p.id)));
+    if (prev && profiles.find(pr => pr.id === prev)) el.value = prev;
+    else if (activeProfileId) el.value = activeProfileId;
+  });
+  // Auto-load worlds for the selected profile
+  const wSel = document.getElementById('worldsProfileSelect');
+  if (wSel.value) {
+    const p = profiles.find(pr => pr.id === wSel.value);
+    currentWorldsGameDir = (p && p.gameDir) ? p.gameDir : '';
+    refreshWorlds();
+  }
+  // Auto-load resource/shader packs
+  const rpSel = document.getElementById('rpProfileSelect');
+  if (rpSel.value) {
+    const p = profiles.find(pr => pr.id === rpSel.value);
+    currentRpGameDir = (p && p.gameDir) ? p.gameDir : '';
+    refreshResourcePacks();
+  }
+  const spSel = document.getElementById('spProfileSelect');
+  if (spSel.value) {
+    const p = profiles.find(pr => pr.id === spSel.value);
+    currentSpGameDir = (p && p.gameDir) ? p.gameDir : '';
+    refreshShaderPacks();
+  }
+}
+
+async function refreshResourcePacks() {
+  if (!currentRpGameDir) { showAssetState('rp', 'empty'); return; }
+  const packs = await window.launcher.getResourcePacks({ gameDir: currentRpGameDir });
+  if (!packs.length) { showAssetState('rp', 'none'); return; }
+  showAssetState('rp', 'list');
+  const body = document.getElementById('rpListBody');
+  body.innerHTML = '';
+  packs.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'assets-row';
+    row.innerHTML = `
+      <div class="assets-name">${escapeHtml(p.name)}</div>
+      <div class="assets-size">${p.size ? formatBytes(p.size) : (p.isDir ? 'folder' : '—')}</div>
+      <div><label class="toggle"><input type="checkbox" ${p.enabled ? 'checked' : ''}/><span class="toggle-slider"></span></label></div>
+      <button class="mod-delete" title="Delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+          <polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14H6L5,6"/>
+          <path d="M10,11v6M14,11v6"/><path d="M9,6V4h6v2"/>
+        </svg>
+      </button>`;
+    row.querySelector('input').addEventListener('change', async (e) => {
+      await window.launcher.toggleResourcePack({ gameDir: currentRpGameDir, name: p.name, enabled: e.target.checked });
+      toast(`${p.name} ${e.target.checked ? 'enabled' : 'disabled'}`, 'ok');
+    });
+    row.querySelector('.mod-delete').addEventListener('click', async () => {
+      if (!confirm(`Delete ${p.name}?`)) return;
+      await window.launcher.deleteResourcePack({ gameDir: currentRpGameDir, name: p.name });
+      await refreshResourcePacks();
+      toast('Deleted.', 'ok');
+    });
+    body.appendChild(row);
+  });
+}
+
+async function refreshShaderPacks() {
+  if (!currentSpGameDir) { showAssetState('sp', 'empty'); return; }
+  const packs = await window.launcher.getShaderPacks({ gameDir: currentSpGameDir });
+  if (!packs.length) { showAssetState('sp', 'none'); return; }
+  showAssetState('sp', 'list');
+  const body = document.getElementById('spListBody');
+  body.innerHTML = '';
+  packs.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'assets-row sp-row';
+    row.innerHTML = `
+      <div class="assets-name">${escapeHtml(p.name)}</div>
+      <div class="assets-size">${p.size ? formatBytes(p.size) : (p.isDir ? 'folder' : '—')}</div>
+      <button class="mod-delete" title="Delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+          <polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14H6L5,6"/>
+          <path d="M10,11v6M14,11v6"/><path d="M9,6V4h6v2"/>
+        </svg>
+      </button>`;
+    row.querySelector('.mod-delete').addEventListener('click', async () => {
+      if (!confirm(`Delete ${p.name}?`)) return;
+      await window.launcher.deleteShaderPack({ gameDir: currentSpGameDir, name: p.name });
+      await refreshShaderPacks();
+      toast('Deleted.', 'ok');
+    });
+    body.appendChild(row);
+  });
+}
+
+function showAssetState(prefix, state) {
+  document.getElementById(`${prefix}Empty`).style.display = state === 'empty' ? '' : 'none';
+  document.getElementById(`${prefix}None`).style.display  = state === 'none'  ? '' : 'none';
+  document.getElementById(`${prefix}List`).style.display  = state === 'list'  ? '' : 'none';
+}
+
+// ── Mod conflict checker ───────────────────────────────────────────────────────
+async function checkModConflicts() {
+  if (!currentModProfile) return toast('Select a profile first.', 'err');
+  const bar = document.getElementById('modConflictsBar');
+  const txt = document.getElementById('modConflictsText');
+  const lst = document.getElementById('modConflictsList');
+  bar.style.display = '';
+  lst.innerHTML = '';
+  txt.textContent = 'Checking for conflicts…';
+  const gd = getGameDirForModProfile();
+  const r  = await window.launcher.checkModConflicts({ gameDir: gd });
+  if (r.error) { txt.textContent = `Error: ${r.error}`; return; }
+  if (!r.conflicts.length) {
+    txt.textContent = `No conflicts found ✓  (${r.checked} mods checked, ${r.identified || 0} identified on Modrinth)`;
+  } else {
+    txt.textContent = `${r.conflicts.length} conflict${r.conflicts.length > 1 ? 's' : ''} detected:`;
+    r.conflicts.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'conflict-item';
+      div.innerHTML = `<span class="conflict-mod">${escapeHtml(c.mod1)}</span>
+        <span class="conflict-sep">⚡</span>
+        <span class="conflict-mod">${escapeHtml(c.mod2)}</span>
+        <span class="conflict-reason">${escapeHtml(c.reason)}</span>`;
+      lst.appendChild(div);
+    });
+  }
 }

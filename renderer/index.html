@@ -78,6 +78,14 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
         <span>Servers</span>
       </button>
+      <button class="nav-btn" data-tab="worlds">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        <span>Worlds</span>
+      </button>
+      <button class="nav-btn" data-tab="assets">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Assets</span>
+      </button>
       <button class="nav-btn" data-tab="settings">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
         <span>Settings</span>
@@ -317,6 +325,7 @@
             <svg class="select-arrow" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
           </div>
           <button class="save-btn" id="checkUpdatesBtn">Check Updates</button>
+          <button class="save-btn secondary-btn" id="checkConflictsBtn">Check Conflicts</button>
           <button class="save-btn" id="openModsFolderBtn">Open Folder</button>
           <label class="save-btn" style="cursor:pointer">+ Add Mod<input type="file" id="modFileInput" accept=".jar" multiple style="display:none"/></label>
         </div>
@@ -328,6 +337,14 @@
         <span id="modUpdatesText">Checking…</span>
         <button class="update-all-btn" id="updateAllModsBtn" style="display:none">Update All</button>
         <button class="mod-updates-dismiss" id="modUpdatesDismiss">×</button>
+      </div>
+
+      <!-- Conflict results bar (hidden) -->
+      <div class="mod-conflicts-bar" id="modConflictsBar" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="modConflictsText">Checking…</span>
+        <div id="modConflictsList"></div>
+        <button class="mod-updates-dismiss" id="modConflictsDismiss">×</button>
       </div>
 
       <div class="mods-empty" id="modsEmpty">
@@ -487,6 +504,148 @@
           <h3 class="section-title">Updates</h3>
           <div class="setting-row"><label class="setting-label">GitHub Repo <span class="label-hint">(for update checks)</span></label><input type="text" id="settingsUpdateRepo" class="setting-input" placeholder="owner/repo"/></div>
           <div class="setting-row"><label class="setting-label">Check on startup</label><label class="toggle"><input type="checkbox" id="settingsCheckUpdate" checked/><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ WORLDS ══ -->
+    <section class="tab-panel" id="tab-worlds">
+      <div class="tab-header">
+        <h2 class="tab-title">Worlds</h2>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="select-wrapper">
+            <select id="worldsProfileSelect" class="version-select" style="min-width:200px"><option value="">Select profile…</option></select>
+            <svg class="select-arrow" viewBox="0 0 10 6" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+          </div>
+          <button class="save-btn" id="refreshWorldsBtn">Refresh</button>
+        </div>
+      </div>
+      <div class="world-state" id="worldsEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="52" height="52" style="color:var(--text3)"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        <p>Select a profile to view worlds</p>
+        <span>Worlds are stored in the profile's saves/ folder</span>
+      </div>
+      <div class="world-state" id="worldsLoading" style="display:none"><div class="spinner"></div><span>Loading worlds…</span></div>
+      <div class="world-state" id="worldsNone" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="52" height="52" style="color:var(--text3)"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        <p>No worlds found</p><span>Create a world in-game first</span>
+      </div>
+      <div class="worlds-grid" id="worldsGrid" style="display:none"></div>
+    </section>
+
+    <!-- ══ ASSETS ══ -->
+    <section class="tab-panel" id="tab-assets">
+      <div class="browse-tabs">
+        <button class="browse-tab active" data-atab="resourcepacks">Resource Packs</button>
+        <button class="browse-tab" data-atab="shaderpacks">Shader Packs</button>
+      </div>
+
+      <!-- ── Resource Packs ── -->
+      <div class="assets-panel active" id="assets-resourcepacks">
+        <!-- Inner sub-tabs: Installed | Browse -->
+        <div class="assets-inner-tabs">
+          <button class="assets-inner-tab active" data-rptab="installed">Installed</button>
+          <button class="assets-inner-tab" data-rptab="browse">Browse Modrinth</button>
+        </div>
+
+        <!-- INSTALLED -->
+        <div class="assets-inner-panel active" id="rp-installed">
+          <div class="tab-header" style="position:relative;top:0">
+            <div style="display:flex;gap:10px;align-items:center">
+              <div class="select-wrapper">
+                <select id="rpProfileSelect" class="version-select" style="min-width:200px"><option value="">Select profile…</option></select>
+                <svg class="select-arrow" viewBox="0 0 10 6" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </div>
+              <button class="save-btn" id="openRpFolderBtn">Open Folder</button>
+              <label class="save-btn" style="cursor:pointer">+ Add Pack<input type="file" id="rpFileInput" accept=".zip" multiple style="display:none"/></label>
+            </div>
+          </div>
+          <div class="assets-state" id="rpEmpty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="48" height="48" style="color:var(--text3)"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <p>Select a profile to manage resource packs</p>
+          </div>
+          <div class="assets-state" id="rpNone" style="display:none"><p>No resource packs installed</p><span>Browse Modrinth to find some!</span></div>
+          <div class="assets-list" id="rpList" style="display:none">
+            <div class="assets-list-header"><span>NAME</span><span>SIZE</span><span>ENABLED</span><span></span></div>
+            <div id="rpListBody"></div>
+          </div>
+        </div>
+
+        <!-- BROWSE -->
+        <div class="assets-inner-panel" id="rp-browse">
+          <div class="browse-search-bar">
+            <input type="text" id="rpBrowseSearch" class="browse-search-input" placeholder="Search resource packs…"/>
+            <div class="select-wrapper">
+              <select id="rpBrowseVersion" class="version-select">
+                <option value="">Any version</option>
+              </select>
+              <svg class="select-arrow" viewBox="0 0 10 6" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+            </div>
+            <div class="select-wrapper">
+              <select id="rpBrowseInstallProfile" class="version-select" style="min-width:160px"><option value="">Install to profile…</option></select>
+              <svg class="select-arrow" viewBox="0 0 10 6" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+            </div>
+            <button class="save-btn" id="rpBrowseSearchBtn">Search</button>
+          </div>
+          <div class="browse-results-grid" id="rpBrowseResults"></div>
+          <div class="browse-load-more-bar" id="rpLoadMoreBar" style="display:none">
+            <button class="save-btn secondary-btn" id="rpLoadMoreBtn">Load More</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Shader Packs ── -->
+      <div class="assets-panel" id="assets-shaderpacks">
+        <!-- Inner sub-tabs -->
+        <div class="assets-inner-tabs">
+          <button class="assets-inner-tab active" data-sptab="installed">Installed</button>
+          <button class="assets-inner-tab" data-sptab="browse">Browse Modrinth</button>
+        </div>
+
+        <!-- INSTALLED -->
+        <div class="assets-inner-panel active" id="sp-installed">
+          <div class="tab-header" style="position:relative;top:0">
+            <div style="display:flex;gap:10px;align-items:center">
+              <div class="select-wrapper">
+                <select id="spProfileSelect" class="version-select" style="min-width:200px"><option value="">Select profile…</option></select>
+                <svg class="select-arrow" viewBox="0 0 10 6" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </div>
+              <button class="save-btn" id="openSpFolderBtn">Open Folder</button>
+              <label class="save-btn" style="cursor:pointer">+ Add Shader<input type="file" id="spFileInput" accept=".zip" multiple style="display:none"/></label>
+            </div>
+          </div>
+          <div class="assets-state" id="spEmpty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="48" height="48" style="color:var(--text3)"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 000 20"/><path d="M12 8v4l3 3"/></svg>
+            <p>Select a profile to manage shader packs</p>
+            <span>Requires OptiFine or Iris Shaders mod</span>
+          </div>
+          <div class="assets-state" id="spNone" style="display:none"><p>No shader packs installed</p><span>Browse Modrinth to find some!</span></div>
+          <div class="assets-list" id="spList" style="display:none">
+            <div class="assets-list-header"><span>NAME</span><span>SIZE</span><span></span></div>
+            <div id="spListBody"></div>
+          </div>
+        </div>
+
+        <!-- BROWSE -->
+        <div class="assets-inner-panel" id="sp-browse">
+          <div class="browse-search-bar">
+            <input type="text" id="spBrowseSearch" class="browse-search-input" placeholder="Search shader packs…"/>
+            <div class="select-wrapper">
+              <select id="spBrowseVersion" class="version-select">
+                <option value="">Any version</option>
+              </select>
+              <svg class="select-arrow" viewBox="0 0 10 6" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+            </div>
+            <div class="select-wrapper">
+              <select id="spBrowseInstallProfile" class="version-select" style="min-width:160px"><option value="">Install to profile…</option></select>
+              <svg class="select-arrow" viewBox="0 0 10 6" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+            </div>
+            <button class="save-btn" id="spBrowseSearchBtn">Search</button>
+          </div>
+          <div class="browse-results-grid" id="spBrowseResults"></div>
+          <div class="browse-load-more-bar" id="spLoadMoreBar" style="display:none">
+            <button class="save-btn secondary-btn" id="spLoadMoreBtn">Load More</button>
+          </div>
         </div>
       </div>
     </section>
