@@ -1,6 +1,6 @@
 {
   "name": "nova-launcher",
-  "version": "3.9.0",
+  "version": "3.9.150",
   "description": "A fast, offline Minecraft launcher built with Electron",
   "main": "main.js",
   "scripts": {
@@ -44,7 +44,7 @@
     "offline",
     "cracked"
   ],
-  "author": "Negro-boi",
+  "author": "Rosilon",
   "license": "MIT",
   "dependencies": {
     "minecraft-launcher-core": "^3.9.0",

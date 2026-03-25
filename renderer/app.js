@@ -60,25 +60,38 @@ let servers           = [];
 
 // ── Init ───────────────────────────────────────────────────────────────────
 (async function init() {
+  // Show loading screen
+  setLoading('Starting…', 0);
+
   try { await loadSettings(); } catch(e) { console.error('loadSettings:', e); }
+  setLoading('Loading versions…', 15);
   setupNavigation();
   setupRamSlider();
   setupLoaderButtons();
   try { await loadVersions(); } catch(e) { console.error('loadVersions:', e); }
+  setLoading('Loading profiles…', 30);
   try { await loadProfiles(); } catch(e) { console.error('loadProfiles:', e); }
+  setLoading('Checking Java…', 45);
   try { await checkJava(); } catch(e) { console.error('checkJava:', e); }
+  setLoading('Initializing mods…', 58);
   try { await initMods(); } catch(e) { console.error('initMods:', e); }
   try { await initBrowse(); } catch(e) { console.error('initBrowse:', e); }
+  setLoading('Loading screenshots…', 70);
   try { await initScreenshots(); } catch(e) { console.error('initScreenshots:', e); }
   try { await initServers(); } catch(e) { console.error('initServers:', e); }
+  setLoading('Loading worlds…', 82);
   try { await initWorlds(); } catch(e) { console.error('initWorlds:', e); }
   try { await initAssets(); } catch(e) { console.error('initAssets:', e); }
+  setLoading('Almost ready…', 95);
   setupFilterBtns();
   setupPlayBtn();
   setupSettingsSave();
   setupCrashModal();
+  try { await initAbout(); } catch(e) { console.error('initAbout:', e); }
   checkForUpdates();
   setupTitlebarUpdate();
+  setLoading('Ready!', 100);
+  setTimeout(hideLoading, 500);
 })();
 
 // ── Navigation ─────────────────────────────────────────────────────────────
@@ -1096,7 +1109,7 @@ function updateServerCard(card, server) {
 let _updateInfo = null;
 
 async function checkForUpdates() {
-  const repo = settings.updateRepo || 'Negro-boi/Nova-Launcher';
+  const repo = settings.updateRepo || 'Rosilon/Nova-launcher';
   const r = await window.launcher.checkUpdate({ repo });
   if (r.hasUpdate) {
     _updateInfo = r;
@@ -1545,4 +1558,124 @@ async function checkModConflicts() {
       lst.appendChild(div);
     });
   }
+}
+
+// ── Loading screen ─────────────────────────────────────────────────────────
+function setLoading(status, percent) {
+  const bar = document.getElementById('loadingBarFill');
+  const txt = document.getElementById('loadingStatus');
+  if (bar) bar.style.width = `${percent}%`;
+  if (txt) txt.textContent = status;
+}
+
+function hideLoading() {
+  const el = document.getElementById('loadingScreen');
+  if (!el) return;
+  el.classList.add('hidden');
+  setTimeout(() => el.remove(), 450);
+}
+
+// ── About tab ──────────────────────────────────────────────────────────────
+let _aboutUpdateInfo = null;
+
+async function initAbout() {
+  const repo = 'Rosilon/Nova-launcher';
+
+  // Set current version
+  const r = await window.launcher.checkUpdate({ repo });
+  const current = r.current || '—';
+  document.getElementById('aboutVersion').textContent = `v${current}`;
+  document.getElementById('aboutCurrentVer').textContent = `v${current}`;
+  document.getElementById('aboutRepoLink').addEventListener('click', e => {
+    e.preventDefault();
+    window.open(`https://github.com/${repo}`);
+  });
+
+  // Check for update
+  document.getElementById('aboutUpdateChecking').style.display = 'flex';
+  document.getElementById('aboutUpdateLatest').style.display   = 'none';
+  document.getElementById('aboutUpdateAvailable').style.display = 'none';
+
+  if (r.hasUpdate) {
+    _aboutUpdateInfo = r;
+    showAboutUpdateAvailable(r);
+  } else {
+    document.getElementById('aboutUpdateChecking').style.display = 'none';
+    document.getElementById('aboutUpdateLatest').style.display   = 'flex';
+  }
+
+  // Re-check button
+  document.getElementById('aboutRecheckBtn').addEventListener('click', async () => {
+    document.getElementById('aboutUpdateLatest').style.display   = 'none';
+    document.getElementById('aboutUpdateChecking').style.display = 'flex';
+    const r2 = await window.launcher.checkUpdate({ repo });
+    if (r2.hasUpdate) {
+      _aboutUpdateInfo = r2;
+      showAboutUpdateAvailable(r2);
+    } else {
+      document.getElementById('aboutUpdateChecking').style.display = 'none';
+      document.getElementById('aboutUpdateLatest').style.display   = 'flex';
+    }
+  });
+
+  // Install button
+  document.getElementById('aboutInstallBtn').addEventListener('click', aboutStartDownload);
+}
+
+function showAboutUpdateAvailable(r) {
+  document.getElementById('aboutUpdateChecking').style.display  = 'none';
+  document.getElementById('aboutUpdateAvailable').style.display = 'flex';
+  document.getElementById('aboutUpdateAvailableText').textContent = `v${r.latest} is available!`;
+  document.getElementById('aboutVerRow').style.display          = 'flex';
+  document.getElementById('aboutNewVer').textContent            = `v${r.latest}`;
+  document.getElementById('aboutUpdateActions').style.display   = 'flex';
+  if (r.releaseNotes) {
+    const notes = document.getElementById('aboutReleaseNotes');
+    notes.textContent = r.releaseNotes;
+    notes.style.display = '';
+  }
+}
+
+async function aboutStartDownload() {
+  if (!_aboutUpdateInfo?.downloadUrl) {
+    toast('No download URL. Check GitHub releases page.', 'err');
+    return;
+  }
+  const btn = document.getElementById('aboutInstallBtn');
+  btn.disabled = true;
+  btn.textContent = 'Starting…';
+
+  const progressWrap = document.getElementById('aboutProgressWrap');
+  const progressFill = document.getElementById('aboutProgressFill');
+  const progressText = document.getElementById('aboutProgressText');
+  progressWrap.style.display = '';
+  progressFill.style.width   = '0%';
+  progressText.textContent   = 'Connecting…';
+  document.getElementById('aboutUpdateActions').style.display = 'none';
+
+  const unsub = window.launcher.on('update-download-progress', ({ percent, received, total }) => {
+    progressFill.style.width = `${percent}%`;
+    progressText.textContent = `Downloading… ${percent}%  (${formatBytes(received)} / ${formatBytes(total)})`;
+  });
+
+  const r = await window.launcher.downloadUpdate({
+    downloadUrl: _aboutUpdateInfo.downloadUrl,
+    fileName:    _aboutUpdateInfo.fileName,
+  });
+  unsub();
+
+  if (!r.success) {
+    toast(`Download failed: ${r.error}`, 'err');
+    btn.disabled = false;
+    btn.textContent = 'Retry';
+    document.getElementById('aboutUpdateActions').style.display = 'flex';
+    return;
+  }
+
+  progressFill.style.width = '100%';
+  progressText.textContent = 'Installing silently…';
+
+  setTimeout(async () => {
+    await window.launcher.installUpdate({ filePath: r.path });
+  }, 600);
 }

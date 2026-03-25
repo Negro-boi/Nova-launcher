@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-28-47848F?logo=electron)](https://electronjs.org)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs)](https://nodejs.org)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)](#)
+![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)
 
 ---
 
@@ -74,13 +74,13 @@
 
 ## Installation
 
-Download the latest release from the [Releases](https://github.com/Negro-boi/Nova-Launcher/releases) page.
+Download the latest release from the [Releases](https://github.com/Rosilon/Nova-launcher/releases) page.
 
-| Platform | File |
-| -------- | ---- |
-| Windows  | `Nova-Launcher-Setup-x.x.x.exe` |
-| Linux    | `Nova-Launcher-x.x.x.AppImage` |
-| macOS    | `Nova-Launcher-x.x.x.dmg` |
+| Platform | File                             |
+| -------- | -------------------------------- |
+| Windows  | `Nova-Launcher-Setup-x.x.x.exe`  |
+| Linux    | `Nova-Launcher-x.x.x.AppImage`   |
+| macOS    | `Nova-Launcher-x.x.x.dmg`        |
 
 **Windows:** run the `.exe` installer and follow the setup wizard.
 
@@ -99,7 +99,7 @@ Download the latest release from the [Releases](https://github.com/Negro-boi/Nov
 
 ```bash
 # Clone the repository
-git clone https://github.com/Negro-boi/Nova-Launcher.git
+git clone https://github.com/Rosilon/Nova-launcher.git
 cd Nova-Launcher
 
 # Install dependencies
@@ -158,15 +158,15 @@ Nova-Launcher/
 
 All launcher data is stored under `~/.nova-launcher/`:
 
-| Path | Contents |
-| ---- | -------- |
-| `settings.json`        | Global settings |
-| `profiles.json`        | Profile definitions |
-| `servers.json`         | Saved server list |
-| `minecraft/`           | Default game directory |
-| `instances/<id>/`      | Per-profile game directories |
-| `java/`                | Adoptium JRE downloads |
-| `world-backups/`       | World ZIP backups |
+| Path                  | Contents                      |
+| --------------------- | ----------------------------- |
+| `settings.json`       | Global settings               |
+| `profiles.json`       | Profile definitions           |
+| `servers.json`        | Saved server list             |
+| `minecraft/`          | Default game directory        |
+| `instances/<id>/`     | Per-profile game directories  |
+| `java/`               | Adoptium JRE downloads        |
+| `world-backups/`      | World ZIP backups             |
 
 ---
 

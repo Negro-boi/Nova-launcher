@@ -17,7 +17,7 @@ const PROFILES_FILE  = path.join(LAUNCHER_DIR, 'profiles.json');
 const SERVERS_FILE   = path.join(LAUNCHER_DIR, 'servers.json');
 const SETTINGS_FILE  = path.join(LAUNCHER_DIR, 'settings.json');
 
-let packageVersion = '3.9.0';
+let packageVersion = '3.9.150';
 try { packageVersion = require('./package.json').version; } catch {}
 
 async function ensureDirs() {
@@ -675,7 +675,7 @@ ipcMain.handle('open-screenshots-folder', async (_, { gameDir }) => {
 });
 
 // ── Update checker ────────────────────────────────────────────────────────────
-ipcMain.handle('check-update', async (_, { repo = 'Negro-boi/Nova-Launcher' } = {}) => {
+ipcMain.handle('check-update', async (_, { repo = 'Rosilon/Nova-launcher' } = {}) => {
   try {
     const data = await fetchJson(`https://api.github.com/repos/${repo}/releases/latest`);
     const latestVersion = (data.tag_name || '').replace(/^v/, '');
@@ -735,10 +735,15 @@ ipcMain.handle('download-update', async (_, { downloadUrl, fileName }) => {
 
 ipcMain.handle('install-update', async (_, { filePath }) => {
   try {
-    // Launch installer and quit
-    const { exec } = require('child_process');
-    exec(`"${filePath}"`, { detached: true });
-    setTimeout(() => app.quit(), 1000);
+    // Run NSIS installer silently (/S flag) — installs without wizard, then relaunches
+    const { spawn } = require('child_process');
+    const child = spawn(filePath, ['/S'], {
+      detached: true,
+      stdio: 'ignore',
+      shell: false,
+    });
+    child.unref();
+    setTimeout(() => app.quit(), 1200);
     return { success: true };
   } catch (e) { return { success: false, error: e.message }; }
 });
